@@ -3,140 +3,694 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Casino</title>
-    <link rel="stylesheet" href="style.css">
+    <title>🤑 Crypto Casino | Play & Win USDT</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1><i class="fas fa-coins"></i> Crypto Casino</h1>
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="loader"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            <i class="fas fa-crown"></i>
+            <h2>Crypto Casino</h2>
+        </div>
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active" data-page="dashboard">
+                <i class="fas fa-home"></i>
+                <span>Главная</span>
+            </a>
+            <a href="#" class="nav-item" data-page="games">
+                <i class="fas fa-gamepad"></i>
+                <span>Игры</span>
+            </a>
+            <a href="#" class="nav-item" data-page="wallet">
+                <i class="fas fa-wallet"></i>
+                <span>Кошелёк</span>
+            </a>
+            <a href="#" class="nav-item" data-page="history">
+                <i class="fas fa-history"></i>
+                <span>История</span>
+            </a>
+            <a href="#" class="nav-item" data-page="leaderboard">
+                <i class="fas fa-trophy"></i>
+                <span>Топ игроков</span>
+            </a>
+        </nav>
+        <div class="user-panel">
+            <div class="user-avatar">
+                <i class="fas fa-user"></i>
+            </div>
             <div class="user-info">
-                <div class="balance">
-                    <span id="balance">1000</span> ₿
-                </div>
-                <div class="user-id">
-                    ID: <span id="userId">USER_12345</span>
-                </div>
-            </div>
-        </header>
-
-        <div class="game-selection">
-            <h2>Выберите игру</h2>
-            <div class="games">
-                <div class="game-card" data-game="slots">
-                    <i class="fas fa-sliders-h"></i>
-                    <h3>Слоты</h3>
-                </div>
-                <div class="game-card" data-game="dice">
-                    <i class="fas fa-dice"></i>
-                    <h3>Кости</h3>
-                </div>
-                <div class="game-card" data-game="roulette">
-                    <i class="fas fa-compact-disc"></i>
-                    <h3>Рулетка</h3>
+                <span class="username" id="userName">Гость</span>
+                <div class="user-balance">
+                    <i class="fas fa-coins"></i>
+                    <span id="userBalance">0.00</span> USDT
                 </div>
             </div>
-        </div>
-
-        <main class="game-area">
-            <!-- Слоты -->
-            <div id="slots-game" class="game active">
-                <h2>Слот-машина</h2>
-                <div class="slots-container">
-                    <div class="slot-reel" id="reel1">🍒</div>
-                    <div class="slot-reel" id="reel2">🍋</div>
-                    <div class="slot-reel" id="reel3">7️⃣</div>
-                </div>
-                <div class="bet-controls">
-                    <label>Ставка:</label>
-                    <div class="bet-amount">
-                        <button class="bet-btn" data-change="-100">-100</button>
-                        <input type="number" id="slotsBet" value="100" min="10" max="1000">
-                        <button class="bet-btn" data-change="100">+100</button>
-                    </div>
-                    <button id="spinBtn" class="play-btn">
-                        <i class="fas fa-redo"></i> Крутить
-                    </button>
-                </div>
-                <div class="result" id="slotsResult"></div>
-            </div>
-
-            <!-- Кости -->
-            <div id="dice-game" class="game">
-                <h2>Игра в кости</h2>
-                <div class="dice-container">
-                    <div class="dice" id="dice1">⚀</div>
-                    <div class="dice" id="dice2">⚁</div>
-                </div>
-                <div class="bet-choice">
-                    <p>Выберите ставку:</p>
-                    <div class="choice-buttons">
-                        <button class="choice-btn" data-choice="even">Чётное</button>
-                        <button class="choice-btn" data-choice="odd">Нечётное</button>
-                        <button class="choice-btn" data-choice="high">Высокое (4-6)</button>
-                        <button class="choice-btn" data-choice="low">Низкое (1-3)</button>
-                    </div>
-                </div>
-                <div class="bet-controls">
-                    <label>Ставка:</label>
-                    <input type="number" id="diceBet" value="50" min="10" max="500">
-                    <button id="rollDiceBtn" class="play-btn">
-                        <i class="fas fa-dice"></i> Бросить кости
-                    </button>
-                </div>
-                <div class="result" id="diceResult"></div>
-            </div>
-
-            <!-- Рулетка -->
-            <div id="roulette-game" class="game">
-                <h2>Рулетка</h2>
-                <div class="roulette-wheel" id="rouletteWheel">
-                    <div class="wheel-center">0</div>
-                </div>
-                <div class="roulette-bets">
-                    <div class="color-bets">
-                        <button class="color-btn red" data-color="red">Красное</button>
-                        <button class="color-btn black" data-color="black">Чёрное</button>
-                        <button class="color-btn green" data-color="green">Зелёное (0)</button>
-                    </div>
-                    <div class="number-bets">
-                        <input type="number" id="numberBet" min="0" max="36" placeholder="Число (0-36)">
-                    </div>
-                </div>
-                <div class="bet-controls">
-                    <label>Ставка:</label>
-                    <input type="number" id="rouletteBet" value="50" min="10" max="1000">
-                    <button id="spinRouletteBtn" class="play-btn">
-                        <i class="fas fa-compact-disc"></i> Крутить рулетку
-                    </button>
-                </div>
-                <div class="result" id="rouletteResult"></div>
-            </div>
-        </main>
-
-        <div class="payment-section">
-            <h3><i class="fas fa-wallet"></i> Пополнение баланса</h3>
-            <div class="deposit-options">
-                <div class="deposit-amount">
-                    <input type="number" id="depositAmount" value="1000" min="100" max="10000">
-                    <span>₿</span>
-                </div>
-                <button id="depositBtn" class="payment-btn">
-                    <i class="fas fa-coins"></i> Пополнить через CryptoBot
-                </button>
-            </div>
-            <div id="paymentInfo" class="payment-info"></div>
-        </div>
-
-        <div class="history">
-            <h3>История игр</h3>
-            <div id="gameHistory"></div>
         </div>
     </div>
 
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="page-title">Главная</div>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-primary" id="connectTelegram">
+                    <i class="fab fa-telegram"></i> Подключить Telegram
+                </button>
+                <button class="btn btn-secondary" id="refreshBalance">
+                    <i class="fas fa-sync-alt"></i> Обновить
+                </button>
+            </div>
+        </header>
+
+        <!-- Pages -->
+        <div class="page active" id="dashboard">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Баланс</h3>
+                        <div class="stat-value" id="balanceStat">0.00 USDT</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Всего выиграно</h3>
+                        <div class="stat-value" id="totalWinsStat">0.00 USDT</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Ставок сделано</h3>
+                        <div class="stat-value" id="totalBetsStat">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Уровень</h3>
+                        <div class="stat-value" id="userLevel">Новичок</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <h3>Быстрые действия</h3>
+                <div class="actions-grid">
+                    <button class="action-btn" id="quickDeposit">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Пополнить</span>
+                    </button>
+                    <button class="action-btn" id="quickWithdraw">
+                        <i class="fas fa-minus-circle"></i>
+                        <span>Вывести</span>
+                    </button>
+                    <button class="action-btn" id="quickSlots">
+                        <i class="fas fa-sliders-h"></i>
+                        <span>Слоты</span>
+                    </button>
+                    <button class="action-btn" id="quickDice">
+                        <i class="fas fa-dice"></i>
+                        <span>Кости</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="recent-games">
+                <h3>Последние игры</h3>
+                <div class="games-list" id="recentGames"></div>
+            </div>
+        </div>
+
+        <!-- Games Page -->
+        <div class="page" id="games">
+            <div class="games-header">
+                <h2>🎮 Игры Казино</h2>
+                <div class="games-filter">
+                    <button class="filter-btn active" data-filter="all">Все</button>
+                    <button class="filter-btn" data-filter="slots">Слоты</button>
+                    <button class="filter-btn" data-filter="dice">Кости</button>
+                    <button class="filter-btn" data-filter="roulette">Рулетка</button>
+                    <button class="filter-btn" data-filter="blackjack">Блэкджек</button>
+                </div>
+            </div>
+
+            <!-- Slots Game -->
+            <div class="game-section active" id="game-slots">
+                <div class="game-container">
+                    <div class="game-ui">
+                        <div class="slots-machine">
+                            <div class="slots-reels">
+                                <div class="reel" id="reel1">
+                                    <div class="symbol">🍒</div>
+                                </div>
+                                <div class="reel" id="reel2">
+                                    <div class="symbol">🍋</div>
+                                </div>
+                                <div class="reel" id="reel3">
+                                    <div class="symbol">7️⃣</div>
+                                </div>
+                                <div class="reel" id="reel4">
+                                    <div class="symbol">💎</div>
+                                </div>
+                                <div class="reel" id="reel5">
+                                    <div class="symbol">⭐</div>
+                                </div>
+                            </div>
+                            <div class="slots-paylines">
+                                <div class="payline" id="payline1"></div>
+                                <div class="payline" id="payline2"></div>
+                                <div class="payline" id="payline3"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="game-controls">
+                            <div class="bet-selector">
+                                <h4>Ставка</h4>
+                                <div class="bet-options">
+                                    <button class="bet-option" data-bet="1">1 USDT</button>
+                                    <button class="bet-option" data-bet="5">5 USDT</button>
+                                    <button class="bet-option active" data-bet="10">10 USDT</button>
+                                    <button class="bet-option" data-bet="50">50 USDT</button>
+                                    <button class="bet-option" data-bet="100">100 USDT</button>
+                                </div>
+                                <div class="custom-bet">
+                                    <input type="number" id="customBet" min="1" max="1000" placeholder="Своя ставка">
+                                    <span>USDT</span>
+                                </div>
+                            </div>
+                            
+                            <div class="spin-section">
+                                <button class="spin-btn" id="spinButton">
+                                    <i class="fas fa-redo"></i>
+                                    <span>Крутить</span>
+                                </button>
+                                <div class="auto-spin">
+                                    <label>
+                                        <input type="checkbox" id="autoSpin">
+                                        Авто-спин
+                                    </label>
+                                    <input type="number" id="autoSpinCount" min="1" max="100" value="10" disabled>
+                                </div>
+                            </div>
+                            
+                            <div class="game-info">
+                                <div class="info-box">
+                                    <span>Текущая ставка:</span>
+                                    <strong id="currentBet">10 USDT</strong>
+                                </div>
+                                <div class="info-box">
+                                    <span>Возможный выигрыш:</span>
+                                    <strong id="potentialWin">100 USDT</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="game-stats">
+                        <h4>Таблица выплат</h4>
+                        <div class="payout-table">
+                            <div class="payout-row">
+                                <span>5x 7️⃣</span>
+                                <span>1000x</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>5x 💎</span>
+                                <span>500x</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>5x ⭐</span>
+                                <span>250x</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>5x 🍒</span>
+                                <span>100x</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>3+ одинаковых</span>
+                                <span>10-50x</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dice Game -->
+            <div class="game-section" id="game-dice">
+                <div class="game-container">
+                    <div class="dice-game">
+                        <div class="dice-area">
+                            <div class="dice" id="dice1">
+                                <div class="dice-face">⚀</div>
+                            </div>
+                            <div class="dice" id="dice2">
+                                <div class="dice-face">⚁</div>
+                            </div>
+                            <div class="dice-total">
+                                <span>Сумма: </span>
+                                <strong id="diceSum">0</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="dice-bets">
+                            <h4>Выберите ставку</h4>
+                            <div class="bet-types">
+                                <div class="bet-type">
+                                    <h5>Чёт/Нечет</h5>
+                                    <div class="bet-buttons">
+                                        <button class="dice-bet-btn" data-bet="even">
+                                            <span>Чётное</span>
+                                            <small>x1.95</small>
+                                        </button>
+                                        <button class="dice-bet-btn" data-bet="odd">
+                                            <span>Нечётное</span>
+                                            <small>x1.95</small>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="bet-type">
+                                    <h5>Больше/Меньше</h5>
+                                    <div class="bet-buttons">
+                                        <button class="dice-bet-btn" data-bet="high">
+                                            <span>7-12</span>
+                                            <small>x1.95</small>
+                                        </button>
+                                        <button class="dice-bet-btn" data-bet="low">
+                                            <span>2-6</span>
+                                            <small>x1.95</small>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="bet-type">
+                                    <h5>Точное число</h5>
+                                    <div class="number-bets">
+                                        <input type="number" id="exactNumber" min="2" max="12" placeholder="Число">
+                                        <small>x5.8</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="dice-controls">
+                                <div class="bet-amount">
+                                    <h5>Сумма ставки</h5>
+                                    <div class="amount-selector">
+                                        <button class="amount-btn" data-change="-1">-1</button>
+                                        <input type="number" id="diceBetAmount" value="10" min="1">
+                                        <button class="amount-btn" data-change="1">+1</button>
+                                        <button class="amount-btn" data-change="10">+10</button>
+                                        <button class="amount-btn" data-change="100">+100</button>
+                                    </div>
+                                </div>
+                                
+                                <button class="roll-dice-btn" id="rollDice">
+                                    <i class="fas fa-dice"></i>
+                                    Бросить кости
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Roulette Game -->
+            <div class="game-section" id="game-roulette">
+                <div class="roulette-container">
+                    <div class="roulette-wheel-container">
+                        <div class="roulette-wheel" id="rouletteWheel">
+                            <div class="wheel-numbers">
+                                <!-- Numbers will be generated dynamically -->
+                            </div>
+                            <div class="wheel-ball"></div>
+                        </div>
+                        <div class="roulette-result">
+                            <div class="result-number" id="rouletteNumber">0</div>
+                            <div class="result-color" id="rouletteColor"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="roulette-table">
+                        <div class="table-numbers">
+                            <!-- Roulette numbers grid -->
+                        </div>
+                        <div class="table-bets">
+                            <div class="outside-bets">
+                                <button class="outside-bet" data-bet="red">
+                                    <span>Красное</span>
+                                    <small>x2</small>
+                                </button>
+                                <button class="outside-bet" data-bet="black">
+                                    <span>Чёрное</span>
+                                    <small>x2</small>
+                                </button>
+                                <button class="outside-bet" data-bet="even">
+                                    <span>Чётное</span>
+                                    <small>x2</small>
+                                </button>
+                                <button class="outside-bet" data-bet="odd">
+                                    <span>Нечётное</span>
+                                    <small>x2</small>
+                                </button>
+                                <button class="outside-bet" data-bet="1-18">
+                                    <span>1-18</span>
+                                    <small>x2</small>
+                                </button>
+                                <button class="outside-bet" data-bet="19-36">
+                                    <span>19-36</span>
+                                    <small>x2</small>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="roulette-controls">
+                            <div class="chip-selector">
+                                <div class="chips">
+                                    <div class="chip" data-value="1">1</div>
+                                    <div class="chip" data-value="5">5</div>
+                                    <div class="chip active" data-value="10">10</div>
+                                    <div class="chip" data-value="25">25</div>
+                                    <div class="chip" data-value="100">100</div>
+                                </div>
+                            </div>
+                            
+                            <div class="control-buttons">
+                                <button class="clear-bets" id="clearRoulette">
+                                    Очистить ставки
+                                </button>
+                                <button class="spin-roulette" id="spinRoulette">
+                                    Крутить рулетку
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blackjack Game -->
+            <div class="game-section" id="game-blackjack">
+                <div class="blackjack-container">
+                    <div class="blackjack-table">
+                        <div class="dealer-area">
+                            <h4>Дилер</h4>
+                            <div class="dealer-cards" id="dealerCards"></div>
+                            <div class="dealer-score" id="dealerScore">0</div>
+                        </div>
+                        
+                        <div class="player-area">
+                            <h4>Игрок</h4>
+                            <div class="player-cards" id="playerCards"></div>
+                            <div class="player-score" id="playerScore">0</div>
+                        </div>
+                        
+                        <div class="blackjack-controls">
+                            <div class="betting-area">
+                                <h5>Ставка</h5>
+                                <div class="blackjack-bet">
+                                    <input type="number" id="blackjackBet" value="10" min="1">
+                                    <span>USDT</span>
+                                </div>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="action-btn" id="hitButton">Взять</button>
+                                <button class="action-btn" id="standButton">Стоять</button>
+                                <button class="action-btn" id="doubleButton">Удвоить</button>
+                                <button class="action-btn" id="splitButton">Разделить</button>
+                            </div>
+                            
+                            <button class="deal-button" id="dealButton">
+                                Раздать карты
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wallet Page -->
+        <div class="page" id="wallet">
+            <div class="wallet-container">
+                <div class="wallet-card">
+                    <div class="wallet-header">
+                        <h3><i class="fas fa-wallet"></i> Мой кошелёк</h3>
+                        <div class="wallet-balance">
+                            <div class="balance-amount" id="walletBalance">0.00</div>
+                            <div class="balance-currency">USDT</div>
+                        </div>
+                    </div>
+                    
+                    <div class="wallet-actions">
+                        <div class="action-deposit">
+                            <h4>Пополнить баланс</h4>
+                            <div class="deposit-amounts">
+                                <button class="amount-btn" data-amount="10">10 USDT</button>
+                                <button class="amount-btn" data-amount="50">50 USDT</button>
+                                <button class="amount-btn" data-amount="100">100 USDT</button>
+                                <button class="amount-btn" data-amount="500">500 USDT</button>
+                                <button class="amount-btn" data-amount="1000">1000 USDT</button>
+                            </div>
+                            <div class="custom-deposit">
+                                <input type="number" id="customDeposit" placeholder="Сумма пополнения" min="10">
+                                <span>USDT</span>
+                            </div>
+                            <button class="btn-deposit" id="depositButton">
+                                <i class="fas fa-arrow-down"></i>
+                                Пополнить через CryptoBot
+                            </button>
+                            <div class="deposit-info">
+                                <p><i class="fas fa-info-circle"></i> Минимальное пополнение: 10 USDT</p>
+                            </div>
+                        </div>
+                        
+                        <div class="action-withdraw">
+                            <h4>Вывести средства</h4>
+                            <div class="withdraw-form">
+                                <div class="form-group">
+                                    <label>Сумма вывода</label>
+                                    <input type="number" id="withdrawAmount" placeholder="Введите сумму" min="50">
+                                    <span>USDT</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Адрес кошелька (TRC20)</label>
+                                    <input type="text" id="withdrawAddress" placeholder="T...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Комиссия сети</label>
+                                    <span class="fee-amount">1 USDT</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>К получению</label>
+                                    <span class="receive-amount" id="receiveAmount">0 USDT</span>
+                                </div>
+                                <button class="btn-withdraw" id="withdrawButton">
+                                    <i class="fas fa-arrow-up"></i>
+                                    Запросить вывод
+                                </button>
+                                <div class="withdraw-info">
+                                    <p><i class="fas fa-info-circle"></i> Минимальный вывод: 50 USDT</p>
+                                    <p><i class="fas fa-clock"></i> Время обработки: 1-24 часа</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="transactions-card">
+                    <h3>Последние транзакции</h3>
+                    <div class="transactions-list" id="transactionsList">
+                        <!-- Transactions will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Page -->
+        <div class="page" id="history">
+            <div class="history-container">
+                <div class="history-filters">
+                    <div class="filter-group">
+                        <label>Период:</label>
+                        <select id="periodFilter">
+                            <option value="today">Сегодня</option>
+                            <option value="week">Неделя</option>
+                            <option value="month">Месяц</option>
+                            <option value="all" selected>Всё время</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Игра:</label>
+                        <select id="gameFilter">
+                            <option value="all">Все игры</option>
+                            <option value="slots">Слоты</option>
+                            <option value="dice">Кости</option>
+                            <option value="roulette">Рулетка</option>
+                            <option value="blackjack">Блэкджек</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Результат:</label>
+                        <select id="resultFilter">
+                            <option value="all">Все</option>
+                            <option value="win">Выигрыши</option>
+                            <option value="loss">Проигрыши</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="history-stats">
+                    <div class="stat-item">
+                        <span>Всего игр:</span>
+                        <strong id="totalGames">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Выиграно:</span>
+                        <strong id="totalWon">0 USDT</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Проиграно:</span>
+                        <strong id="totalLost">0 USDT</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Прибыль:</span>
+                        <strong id="totalProfit" class="positive">0 USDT</strong>
+                    </div>
+                </div>
+                
+                <div class="games-history">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Время</th>
+                                <th>Игра</th>
+                                <th>Ставка</th>
+                                <th>Выигрыш</th>
+                                <th>Результат</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gamesHistoryTable">
+                            <!-- History will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Page -->
+        <div class="page" id="leaderboard">
+            <div class="leaderboard-container">
+                <div class="leaderboard-tabs">
+                    <button class="tab-btn active" data-tab="daily">Сегодня</button>
+                    <button class="tab-btn" data-tab="weekly">Неделя</button>
+                    <button class="tab-btn" data-tab="monthly">Месяц</button>
+                    <button class="tab-btn" data-tab="alltime">За всё время</button>
+                </div>
+                
+                <div class="leaderboard-list">
+                    <div class="leaderboard-header">
+                        <div class="rank">#</div>
+                        <div class="player">Игрок</div>
+                        <div class="wins">Выигрыш</div>
+                        <div class="games">Игр</div>
+                    </div>
+                    <div class="leaderboard-items" id="leaderboardItems">
+                        <!-- Leaderboard items will be loaded here -->
+                    </div>
+                </div>
+                
+                <div class="my-stats">
+                    <h4>Моя статистика</h4>
+                    <div class="stats-grid">
+                        <div class="stat">
+                            <span>Место в рейтинге</span>
+                            <strong id="myRank">-</strong>
+                        </div>
+                        <div class="stat">
+                            <span>Всего выиграно</span>
+                            <strong id="myTotalWins">0 USDT</strong>
+                        </div>
+                        <div class="stat">
+                            <span>Крупнейший выигрыш</span>
+                            <strong id="myBiggestWin">0 USDT</strong>
+                        </div>
+                        <div class="stat">
+                            <span>Процент побед</span>
+                            <strong id="myWinRate">0%</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="telegramModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Подключение Telegram</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Подключите Telegram для получения уведомлений о выигрышах и бонусах!</p>
+                <div class="telegram-widget">
+                    <script async src="https://telegram.org/js/telegram-widget.js?22" 
+                            data-telegram-login="YourCasinoBot" 
+                            data-size="large" 
+                            data-auth-url="https://your-domain.vercel.app/api/auth" 
+                            data-request-access="write"></script>
+                </div>
+                <p class="info-text">
+                    После подключения вы будете получать уведомления о:<br>
+                    • Пополнениях баланса<br>
+                    • Крупных выигрышах<br>
+                    • Статусе выводов<br>
+                    • Бонусах и акциях
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="depositModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Пополнение баланса</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="payment-info" id="paymentInfo"></div>
+                <div class="qr-code" id="qrCode"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications -->
     <div id="notification" class="notification"></div>
 
+    <!-- Scripts -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
