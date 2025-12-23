@@ -1,462 +1,810 @@
 // Конфигурация
-const CRYPTOBOT_API_URL = 'https://pay.crypt.bot/api';
-const CRYPTOBOT_TOKEN = '369197:AAC06ytgeDacntgpQNfOs3b7LomyOknLG3N'; // Замените на ваш токен
+const API_BASE_URL = window.location.origin;
+let userData = null;
+let currentGame = 'slots';
 
-// Состояние игры
-let balance = 1000;
-let gameHistory = [];
-
-// Элементы DOM
-const balanceEl = document.getElementById('balance');
-const gameCards = document.querySelectorAll('.game-card');
-const games = document.querySelectorAll('.game');
-const notification = document.getElementById('notification');
-
-// Инициализация
-document.addEventListener('DOMContentLoaded', () => {
-    updateBalance();
-    loadGameHistory();
+// Инициализация приложения
+document.addEventListener('DOMContentLoaded', async () => {
+    await initApp();
     setupEventListeners();
-    showNotification('Добро пожаловать в Crypto Casino!', 'success');
+    loadGames();
+    
+    // Проверка Telegram Web App
+    if (window.Telegram?.WebApp) {
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+        initTelegramWebApp();
+    }
+    
+    // Скрыть прелоадер
+    setTimeout(() => {
+        document.getElementById('preloader').style.display = 'none';
+    }, 1000);
 });
+
+// Инициализация приложения
+async function initApp() {
+    const token = localStorage.getItem('casino_token');
+    
+    if (token) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                userData = await response.json();
+                updateUserInfo();
+                loadUserData();
+            } else {
+                localStorage.removeItem('casino_token');
+            }
+        } catch (error) {
+            console.error('Auth error:', error);
+        }
+    }
+}
 
 // Настройка обработчиков событий
 function setupEventListeners() {
-    // Переключение игр
-    gameCards.forEach(card => {
-        card.addEventListener('click', () => {
-            const game = card.dataset.game;
-            switchGame(game);
+    // Навигация
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const page = item.dataset.page;
+            switchPage(page);
         });
     });
-
-    // Слот-машина
-    const spinBtn = document.getElementById('spinBtn');
-    const slotsBetInput = document.getElementById('slotsBet');
-    const betBtns = document.querySelectorAll('.bet-btn');
     
-    spinBtn.addEventListener('click', playSlots);
+    // Быстрые действия
+    document.getElementById('quickDeposit').addEventListener('click', () => showDepositModal());
+    document.getElementById('quickWithdraw').addEventListener('click', () => switchPage('wallet'));
+    document.getElementById('quickSlots').addEventListener('click', () => {
+        switchPage('games');
+        setTimeout(() => switchGame('slots'), 100);
+    });
+    document.getElementById('quickDice').addEventListener('click', () => {
+        switchPage('games');
+        setTimeout(() => switchGame('dice'), 100);
+    });
     
-    betBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const change = parseInt(e.target.dataset.change);
-            const currentBet = parseInt(slotsBetInput.value);
-            const newBet = Math.max(10, Math.min(1000, currentBet + change));
-            slotsBetInput.value = newBet;
+    // Подключение Telegram
+    document.getElementById('connectTelegram').addEventListener('click', () => {
+        showTelegramModal();
+    });
+    
+    // Обновление баланса
+    document.getElementById('refreshBalance').addEventListener('click', loadUserData);
+    
+    // Фильтры игр
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const filter = btn.dataset.filter;
+            switchGame(filter);
         });
     });
-
-    // Кости
-    const rollDiceBtn = document.getElementById('rollDiceBtn');
-    const choiceBtns = document.querySelectorAll('.choice-btn');
     
-    rollDiceBtn.addEventListener('click', rollDice);
+    // Инициализация игр
+    initSlotsGame();
+    initDiceGame();
+    initRouletteGame();
+    initBlackjackGame();
     
-    choiceBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            choiceBtns.forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-        });
-    });
-
-    // Рулетка
-    const spinRouletteBtn = document.getElementById('spinRouletteBtn');
-    spinRouletteBtn.addEventListener('click', spinRoulette);
-
     // Платежи
-    const depositBtn = document.getElementById('depositBtn');
-    depositBtn.addEventListener('click', createInvoice);
+    document.getElementById('depositButton').addEventListener('click', processDeposit);
+    document.getElementById('withdrawButton').addEventListener('click', processWithdrawal);
 }
 
-// Переключение между играми
-function switchGame(gameId) {
-    games.forEach(game => {
-        game.classList.remove('active');
-        if (game.id === `${gameId}-game`) {
-            game.classList.add('active');
+// Переключение страниц
+function switchPage(page) {
+    // Обновить навигацию
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.page === page) {
+            item.classList.add('active');
         }
     });
     
-    gameCards.forEach(card => {
-        card.style.borderColor = card.dataset.game === gameId ? '#ffd700' : 'transparent';
+    // Обновить заголовок
+    document.querySelector('.page-title').textContent = getPageTitle(page);
+    
+    // Показать нужную страницу
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(page).classList.add('active');
+}
+
+function getPageTitle(page) {
+    const titles = {
+        'dashboard': 'Главная',
+        'games': 'Игры',
+        'wallet': 'Кошелёк',
+        'history': 'История',
+        'leaderboard': 'Топ игроков'
+    };
+    return titles[page] || 'Главная';
+}
+
+// Переключение игр
+function switchGame(game) {
+    if (game === 'all') game = 'slots';
+    
+    document.querySelectorAll('.game-section').forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    const gameSection = document.getElementById(`game-${game}`);
+    if (gameSection) {
+        gameSection.classList.add('active');
+        currentGame = game;
+    }
+}
+
+// Обновление информации о пользователе
+function updateUserInfo() {
+    if (!userData) return;
+    
+    document.getElementById('userName').textContent = userData.username || 'Гость';
+    document.getElementById('userBalance').textContent = parseFloat(userData.balance || 0).toFixed(2);
+    document.getElementById('balanceStat').textContent = `${parseFloat(userData.balance || 0).toFixed(2)} USDT`;
+    document.getElementById('walletBalance').textContent = parseFloat(userData.balance || 0).toFixed(2);
+}
+
+// Загрузка данных пользователя
+async function loadUserData() {
+    try {
+        const token = localStorage.getItem('casino_token');
+        if (!token) return;
+        
+        const response = await fetch(`${API_BASE_URL}/api/balance`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            userData = { ...userData, ...data };
+            updateUserInfo();
+            
+            // Загрузить последние игры
+            loadRecentGames();
+            // Загрузить транзакции
+            loadTransactions();
+        }
+    } catch (error) {
+        console.error('Error loading user data:', error);
+    }
+}
+
+// ИГРА: Слоты
+function initSlotsGame() {
+    const spinButton = document.getElementById('spinButton');
+    const betOptions = document.querySelectorAll('.bet-option');
+    const customBetInput = document.getElementById('customBet');
+    
+    let currentBet = 10;
+    let isSpinning = false;
+    
+    // Выбор ставки
+    betOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            betOptions.forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
+            currentBet = parseInt(option.dataset.bet);
+            updateBetInfo();
+        });
+    });
+    
+    // Кастомная ставка
+    customBetInput.addEventListener('change', () => {
+        const value = parseInt(customBetInput.value);
+        if (value >= 1 && value <= 1000) {
+            currentBet = value;
+            betOptions.forEach(opt => opt.classList.remove('active'));
+            updateBetInfo();
+        }
+    });
+    
+    // Кнопка вращения
+    spinButton.addEventListener('click', async () => {
+        if (isSpinning) return;
+        
+        // Проверка баланса
+        if (userData && currentBet > userData.balance) {
+            showNotification('Недостаточно средств!', 'error');
+            return;
+        }
+        
+        isSpinning = true;
+        spinButton.disabled = true;
+        
+        // Анимация вращения
+        const reels = document.querySelectorAll('.reel');
+        reels.forEach(reel => reel.classList.add('spinning'));
+        
+        try {
+            // Отправка запроса на сервер
+            const response = await fetch(`${API_BASE_URL}/api/games/slots`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('casino_token')}`
+                },
+                body: JSON.stringify({
+                    bet: currentBet
+                })
+            });
+            
+            const result = await response.json();
+            
+            // Остановка вращения через 2 секунды
+            setTimeout(() => {
+                reels.forEach((reel, index) => {
+                    reel.classList.remove('spinning');
+                    const symbol = result.symbols[index] || '🍒';
+                    reel.querySelector('.symbol').textContent = symbol;
+                });
+                
+                // Показать результат
+                if (result.win > 0) {
+                    showNotification(`🎉 Вы выиграли ${result.win} USDT!`, 'success');
+                    userData.balance += result.win;
+                    updateUserInfo();
+                } else {
+                    showNotification('😔 Попробуйте ещё раз!', 'info');
+                }
+                
+                isSpinning = false;
+                spinButton.disabled = false;
+                
+                // Обновить историю
+                addGameToHistory('slots', currentBet, result.win, result.combination);
+                
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Slots error:', error);
+            showNotification('Ошибка при игре в слоты', 'error');
+            isSpinning = false;
+            spinButton.disabled = false;
+        }
+    });
+    
+    function updateBetInfo() {
+        document.getElementById('currentBet').textContent = `${currentBet} USDT`;
+        document.getElementById('potentialWin').textContent = `${currentBet * 1000} USDT`;
+    }
+}
+
+// ИГРА: Кости
+function initDiceGame() {
+    const rollButton = document.getElementById('rollDice');
+    const betButtons = document.querySelectorAll('.dice-bet-btn');
+    const amountInput = document.getElementById('diceBetAmount');
+    const amountButtons = document.querySelectorAll('.amount-btn');
+    
+    let selectedBetType = null;
+    let betAmount = 10;
+    let exactNumber = null;
+    
+    // Выбор типа ставки
+    betButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            betButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            selectedBetType = button.dataset.bet;
+            
+            // Сбросить точное число
+            if (selectedBetType !== 'exact') {
+                document.getElementById('exactNumber').value = '';
+                exactNumber = null;
+            }
+        });
+    });
+    
+    // Точное число
+    document.getElementById('exactNumber').addEventListener('change', (e) => {
+        const value = parseInt(e.target.value);
+        if (value >= 2 && value <= 12) {
+            exactNumber = value;
+            selectedBetType = 'exact';
+            betButtons.forEach(btn => btn.classList.remove('active'));
+        }
+    });
+    
+    // Изменение суммы ставки
+    amountButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const change = parseInt(button.dataset.change);
+            betAmount = Math.max(1, Math.min(1000, betAmount + change));
+            amountInput.value = betAmount;
+        });
+    });
+    
+    amountInput.addEventListener('change', () => {
+        betAmount = Math.max(1, Math.min(1000, parseInt(amountInput.value) || 10));
+        amountInput.value = betAmount;
+    });
+    
+    // Бросок костей
+    rollButton.addEventListener('click', async () => {
+        if (!selectedBetType) {
+            showNotification('Выберите тип ставки!', 'error');
+            return;
+        }
+        
+        if (userData && betAmount > userData.balance) {
+            showNotification('Недостаточно средств!', 'error');
+            return;
+        }
+        
+        // Анимация броска
+        const dice1 = document.getElementById('dice1');
+        const dice2 = document.getElementById('dice2');
+        
+        dice1.style.animation = 'shake 0.5s ease-in-out';
+        dice2.style.animation = 'shake 0.5s ease-in-out';
+        
+        rollButton.disabled = true;
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/games/dice`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('casino_token')}`
+                },
+                body: JSON.stringify({
+                    bet: betAmount,
+                    betType: selectedBetType,
+                    exactNumber: exactNumber
+                })
+            });
+            
+            const result = await response.json();
+            
+            setTimeout(() => {
+                // Остановить анимацию
+                dice1.style.animation = '';
+                dice2.style.animation = '';
+                
+                // Показать результат
+                dice1.querySelector('.dice-face').textContent = getDiceSymbol(result.dice1);
+                dice2.querySelector('.dice-face').textContent = getDiceSymbol(result.dice2);
+                document.getElementById('diceSum').textContent = result.sum;
+                
+                if (result.win > 0) {
+                    showNotification(`🎲 Выигрыш: ${result.win} USDT!`, 'success');
+                    userData.balance += result.win;
+                    updateUserInfo();
+                } else {
+                    showNotification(`Сумма: ${result.sum}. Попробуйте ещё!`, 'info');
+                }
+                
+                rollButton.disabled = false;
+                
+                // Добавить в историю
+                addGameToHistory('dice', betAmount, result.win, 
+                    `${result.dice1}+${result.dice2}=${result.sum}`);
+                
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Dice error:', error);
+            showNotification('Ошибка при игре в кости', 'error');
+            rollButton.disabled = false;
+        }
     });
 }
 
-// Слот-машина
-async function playSlots() {
-    const bet = parseInt(document.getElementById('slotsBet').value);
+function getDiceSymbol(number) {
+    const symbols = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+    return symbols[number - 1] || '⚀';
+}
+
+// ИГРА: Рулетка
+function initRouletteGame() {
+    // Создать колесо рулетки
+    createRouletteWheel();
     
-    if (bet > balance) {
-        showNotification('Недостаточно средств!', 'error');
-        return;
-    }
+    const spinButton = document.getElementById('spinRoulette');
+    const clearButton = document.getElementById('clearRoulette');
+    const chips = document.querySelectorAll('.chip');
+    const outsideBets = document.querySelectorAll('.outside-bet');
     
-    if (bet < 10) {
-        showNotification('Минимальная ставка: 10 ₿', 'error');
-        return;
-    }
+    let currentChipValue = 10;
+    let placedBets = [];
     
-    // Спин анимация
-    const reels = document.querySelectorAll('.slot-reel');
-    const spinBtn = document.getElementById('spinBtn');
-    spinBtn.disabled = true;
+    // Выбор фишки
+    chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            chips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            currentChipValue = parseInt(chip.dataset.value);
+        });
+    });
     
-    reels.forEach(reel => reel.classList.add('spinning'));
+    // Внешние ставки
+    outsideBets.forEach(bet => {
+        bet.addEventListener('click', () => {
+            if (userData && currentChipValue > userData.balance) {
+                showNotification('Недостаточно средств!', 'error');
+                return;
+            }
+            
+            const betType = bet.dataset.bet;
+            placedBets.push({
+                type: betType,
+                amount: currentChipValue,
+                payout: 2
+            });
+            
+            userData.balance -= currentChipValue;
+            updateUserInfo();
+            
+            showNotification(`Ставка ${currentChipValue} USDT на ${betType}`, 'info');
+        });
+    });
     
-    // Вычитаем ставку
-    balance -= bet;
-    updateBalance();
+    // Очистка ставок
+    clearButton.addEventListener('click', () => {
+        placedBets.forEach(bet => {
+            userData.balance += bet.amount;
+        });
+        placedBets = [];
+        updateUserInfo();
+        showNotification('Ставки очищены', 'info');
+    });
     
-    // Имитация вращения
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    reels.forEach(reel => reel.classList.remove('spinning'));
-    
-    // Генерация результатов
-    const symbols = ['🍒', '🍋', '🍊', '7️⃣', '💎', '⭐'];
-    const results = [
-        symbols[Math.floor(Math.random() * symbols.length)],
-        symbols[Math.floor(Math.random() * symbols.length)],
-        symbols[Math.floor(Math.random() * symbols.length)]
+    // Вращение рулетки
+    spinButton.addEventListener('click', async () => {
+        if (placedBets.length === 0) {
+            showNotification('Сделайте ставки!', 'error');
+            return;
+        }
+        
+        spinButton.disabled = true;
+        const wheel = document.getElementById('rouletteWheel');
+        
+        // Анимация вращения
+        wheel.style.transition = 'transform 0s';
+        wheel.style.transform = 'rotate(0deg)';
+        
+        setTimeout(() => {
+            const spins = 5 + Math.random() * 5; // 5-10 полных оборотов
+            const randomAngle = Math.floor(Math.random() * 360);
+            const totalRotation = spins * 360 + randomAngle;
+            
+            wheel.style.transition = 'transform 5s cubic-bezier(0.1, 0.2, 0.3, 1)';
+            wheel.style.transform = `rotate(${totalRotation}deg)`;
+            
+            // Определить выигрышное число
+            setTimeout(async () => {
+                const winningNumber = Math.floor(randomAngle / 9.73); // 37 чисел на 360 градусов
+                const isRed = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(winningNumber);
+                const isBlack = [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35].includes(winningNumber);
+                const isGreen = winningNumber === 0;
+                
+                // Показать результат
+                document.getElementById('rouletteNumber').textContent = winningNumber;
+                const colorEl = document.getElementById('rouletteColor');
+                colorEl.textContent = isRed ? 'Красное' : isBlack ? 'Чёрное' : 'Зелёное';
+                colorEl.style.color = isRed ? '#ff4444' : isBlack ? '#000' : '#00ff00';
+                
+                try {
+                    // Отправить результат на сервер
+                    const response = await fetch(`${API_BASE_URL}/api/games/roulette`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('casino_token')}`
+                        },
+                        body: JSON.stringify({
+                            bets: placedBets,
+                            winningNumber: winningNumber
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.win > 0) {
+                        showNotification(`🎰 Выигрыш: ${result.win} USDT!`, 'success');
+                        userData.balance += result.win;
+                        updateUserInfo();
+                    }
+                    
+                    // Добавить в историю
+                    addGameToHistory('roulette', 
+                        placedBets.reduce((sum, bet) => sum + bet.amount, 0),
+                        result.win,
+                        `Число: ${winningNumber}`
+                    );
+                    
+                    // Сбросить ставки
+                    placedBets = [];
+                    
+                } catch (error) {
+                    console.error('Roulette error:', error);
+                    showNotification('Ошибка при игре в рулетку', 'error');
+                }
+                
+                spinButton.disabled = false;
+                
+            }, 5000); // После завершения вращения
+            
+        }, 100);
+    });
+}
+
+function createRouletteWheel() {
+    const wheel = document.querySelector('.wheel-numbers');
+    const numbers = [
+        { num: 0, color: 'green' },
+        { num: 32, color: 'red' }, { num: 15, color: 'black' }, { num: 19, color: 'red' },
+        // ... все остальные числа европейской рулетки
     ];
     
-    // Отображение результатов
-    reels.forEach((reel, index) => {
-        reel.textContent = results[index];
+    numbers.forEach((numObj, index) => {
+        const segment = document.createElement('div');
+        segment.className = `wheel-segment ${numObj.color}`;
+        segment.style.transform = `rotate(${index * (360/37)}deg)`;
+        segment.innerHTML = `<span>${numObj.num}</span>`;
+        wheel.appendChild(segment);
+    });
+}
+
+// ИГРА: Блэкджек
+function initBlackjackGame() {
+    const dealButton = document.getElementById('dealButton');
+    const hitButton = document.getElementById('hitButton');
+    const standButton = document.getElementById('standButton');
+    const doubleButton = document.getElementById('doubleButton');
+    
+    let gameActive = false;
+    let currentBet = 10;
+    
+    dealButton.addEventListener('click', async () => {
+        if (userData && currentBet > userData.balance) {
+            showNotification('Недостаточно средств!', 'error');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/games/blackjack/deal`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('casino_token')}`
+                },
+                body: JSON.stringify({
+                    bet: currentBet
+                })
+            });
+            
+            const result = await response.json();
+            
+            // Показать карты
+            displayCards('player', result.playerCards);
+            displayCards('dealer', result.dealerCards, true);
+            
+            // Обновить счёт
+            document.getElementById('playerScore').textContent = result.playerScore;
+            document.getElementById('dealerScore').textContent = '?';
+            
+            gameActive = true;
+            updateButtons(true);
+            
+            userData.balance -= currentBet;
+            updateUserInfo();
+            
+        } catch (error) {
+            console.error('Blackjack error:', error);
+        }
     });
     
-    // Проверка выигрыша
-    let winMultiplier = 0;
-    const resultEl = document.getElementById('slotsResult');
-    
-    if (results[0] === results[1] && results[1] === results[2]) {
-        if (results[0] === '7️⃣') {
-            winMultiplier = 10;
-            resultEl.innerHTML = `<span style="color: #ffd700">🎉 ДЖЕКПОТ! 7-7-7! Выигрыш: ${bet * winMultiplier} ₿</span>`;
+    hitButton.addEventListener('click', async () => {
+        if (!gameActive) return;
+        
+        const response = await fetch(`${API_BASE_URL}/api/games/blackjack/hit`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('casino_token')}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.busted) {
+            endGame('Вы проиграли! Перебор.');
         } else {
-            winMultiplier = 5;
-            resultEl.innerHTML = `<span style="color: #00ff00">🎊 Три в ряд! Выигрыш: ${bet * winMultiplier} ₿</span>`;
+            displayCards('player', [result.newCard]);
+            document.getElementById('playerScore').textContent = result.newScore;
         }
-    } else if (results[0] === results[1] || results[1] === results[2]) {
-        winMultiplier = 2;
-        resultEl.innerHTML = `<span style="color: #00ff00">🎊 Два в ряд! Выигрыш: ${bet * winMultiplier} ₿</span>`;
-    } else {
-        resultEl.innerHTML = `<span style="color: #ff4444">😔 Повезёт в следующий раз!</span>`;
-    }
+    });
     
-    if (winMultiplier > 0) {
-        const winAmount = bet * winMultiplier;
-        balance += winAmount;
-        updateBalance();
-        showNotification(`Вы выиграли ${winAmount} ₿!`, 'success');
-        addToHistory('Слоты', bet, winAmount);
-    } else {
-        addToHistory('Слоты', bet, 0);
-    }
-    
-    spinBtn.disabled = false;
-}
-
-// Игра в кости
-async function rollDice() {
-    const bet = parseInt(document.getElementById('diceBet').value);
-    const selectedChoice = document.querySelector('.choice-btn.active');
-    
-    if (!selectedChoice) {
-        showNotification('Выберите тип ставки!', 'error');
-        return;
-    }
-    
-    if (bet > balance) {
-        showNotification('Недостаточно средств!', 'error');
-        return;
-    }
-    
-    if (bet < 10) {
-        showNotification('Минимальная ставка: 10 ₿', 'error');
-        return;
-    }
-    
-    // Вычитаем ставку
-    balance -= bet;
-    updateBalance();
-    
-    // Анимация броска
-    const dice1 = document.getElementById('dice1');
-    const dice2 = document.getElementById('dice2');
-    const rollBtn = document.getElementById('rollDiceBtn');
-    rollBtn.disabled = true;
-    
-    // Имитация броска
-    for (let i = 0; i < 10; i++) {
-        dice1.textContent = getDiceFace(Math.floor(Math.random() * 6) + 1);
-        dice2.textContent = getDiceFace(Math.floor(Math.random() * 6) + 1);
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    // Финальные результаты
-    const dice1Value = Math.floor(Math.random() * 6) + 1;
-    const dice2Value = Math.floor(Math.random() * 6) + 1;
-    const total = dice1Value + dice2Value;
-    
-    dice1.textContent = getDiceFace(dice1Value);
-    dice2.textContent = getDiceFace(dice2Value);
-    
-    // Проверка выигрыша
-    const choice = selectedChoice.dataset.choice;
-    let win = false;
-    
-    switch (choice) {
-        case 'even':
-            win = total % 2 === 0;
-            break;
-        case 'odd':
-            win = total % 2 === 1;
-            break;
-        case 'high':
-            win = total >= 7;
-            break;
-        case 'low':
-            win = total <= 7;
-            break;
-    }
-    
-    const resultEl = document.getElementById('diceResult');
-    
-    if (win) {
-        const winAmount = bet * 2;
-        balance += winAmount;
-        updateBalance();
-        resultEl.innerHTML = `<span style="color: #00ff00">🎊 Выигрыш! Сумма: ${total}. Вы выиграли ${winAmount} ₿!</span>`;
-        showNotification(`Вы выиграли ${winAmount} ₿!`, 'success');
-        addToHistory('Кости', bet, winAmount);
-    } else {
-        resultEl.innerHTML = `<span style="color: #ff4444">😔 Проигрыш! Сумма: ${total}. Попробуйте ещё раз!</span>`;
-        addToHistory('Кости', bet, 0);
-    }
-    
-    rollBtn.disabled = false;
-}
-
-function getDiceFace(value) {
-    const faces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-    return faces[value - 1];
-}
-
-// Рулетка
-async function spinRoulette() {
-    const bet = parseInt(document.getElementById('rouletteBet').value);
-    const numberBet = document.getElementById('numberBet').value;
-    const colorBet = document.querySelector('.color-btn.active');
-    
-    if (!numberBet && !colorBet) {
-        showNotification('Сделайте ставку на число или цвет!', 'error');
-        return;
-    }
-    
-    if (bet > balance) {
-        showNotification('Недостаточно средств!', 'error');
-        return;
-    }
-    
-    // Вычитаем ставку
-    balance -= bet;
-    updateBalance();
-    
-    // Анимация вращения
-    const wheel = document.getElementById('rouletteWheel');
-    const spinBtn = document.getElementById('spinRouletteBtn');
-    spinBtn.disabled = true;
-    
-    wheel.style.animation = 'spin 0.1s linear infinite';
-    
-    // Имитация вращения
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    wheel.style.animation = 'none';
-    
-    // Генерация результата
-    const result = Math.floor(Math.random() * 37); // 0-36
-    const isRed = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(result);
-    const isBlack = [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35].includes(result);
-    const isGreen = result === 0;
-    
-    // Отображение результата
-    const wheelCenter = document.querySelector('.wheel-center');
-    wheelCenter.textContent = result;
-    wheelCenter.style.color = isRed ? '#ff4444' : isBlack ? '#000' : '#00ff00';
-    wheelCenter.style.backgroundColor = isRed ? '#ff4444' : isBlack ? '#000' : '#00ff00';
-    
-    // Проверка выигрыша
-    const resultEl = document.getElementById('rouletteResult');
-    let winMultiplier = 0;
-    
-    if (numberBet && parseInt(numberBet) === result) {
-        winMultiplier = 36;
-        resultEl.innerHTML = `<span style="color: #ffd700">🎉 ДЖЕКПОТ! Число ${result}! Выигрыш: ${bet * winMultiplier} ₿</span>`;
-    } else if (colorBet) {
-        const color = colorBet.dataset.color;
-        if ((color === 'red' && isRed) || (color === 'black' && isBlack) || (color === 'green' && isGreen)) {
-            winMultiplier = color === 'green' ? 14 : 2;
-            resultEl.innerHTML = `<span style="color: #00ff00">🎊 Цвет ${color === 'red' ? 'красный' : color === 'black' ? 'чёрный' : 'зелёный'}! Выигрыш: ${bet * winMultiplier} ₿</span>`;
+    standButton.addEventListener('click', async () => {
+        if (!gameActive) return;
+        
+        const response = await fetch(`${API_BASE_URL}/api/games/blackjack/stand`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('casino_token')}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        // Показать карты дилера
+        displayCards('dealer', result.dealerCards, false);
+        document.getElementById('dealerScore').textContent = result.dealerScore;
+        
+        // Определить победителя
+        if (result.winner === 'player') {
+            const winAmount = currentBet * 2;
+            endGame(`Вы выиграли ${winAmount} USDT!`);
+            userData.balance += winAmount;
+        } else if (result.winner === 'dealer') {
+            endGame('Дилер выиграл!');
+        } else {
+            endGame('Ничья! Возврат ставки.');
+            userData.balance += currentBet;
         }
+        
+        updateUserInfo();
+    });
+    
+    function displayCards(player, cards, hideFirst = false) {
+        const container = document.getElementById(`${player}Cards`);
+        
+        cards.forEach((card, index) => {
+            const cardEl = document.createElement('div');
+            cardEl.className = 'card';
+            
+            if (hideFirst && index === 0) {
+                cardEl.textContent = '?';
+                cardEl.style.background = '#2d3436';
+            } else {
+                cardEl.textContent = card;
+                cardEl.style.color = ['♥', '♦'].includes(card.slice(-1)) ? '#d63031' : '#000';
+            }
+            
+            container.appendChild(cardEl);
+        });
     }
     
-    if (winMultiplier > 0) {
-        const winAmount = bet * winMultiplier;
-        balance += winAmount;
-        updateBalance();
-        showNotification(`Вы выиграли ${winAmount} ₿!`, 'success');
-        addToHistory('Рулетка', bet, winAmount);
-    } else {
-        resultEl.innerHTML = resultEl.innerHTML || `<span style="color: #ff4444">😔 Выпало ${result}. Попробуйте ещё раз!</span>`;
-        addToHistory('Рулетка', bet, 0);
+    function endGame(message) {
+        showNotification(message, 'info');
+        gameActive = false;
+        updateButtons(false);
+        
+        // Очистить карты через 3 секунды
+        setTimeout(() => {
+            document.getElementById('playerCards').innerHTML = '';
+            document.getElementById('dealerCards').innerHTML = '';
+            document.getElementById('playerScore').textContent = '0';
+            document.getElementById('dealerScore').textContent = '0';
+        }, 3000);
     }
     
-    spinBtn.disabled = false;
-}
-
-// Работа с балансом
-function updateBalance() {
-    balanceEl.textContent = balance;
-    localStorage.setItem('casinoBalance', balance);
-}
-
-function loadBalance() {
-    const saved = localStorage.getItem('casinoBalance');
-    if (saved) balance = parseInt(saved);
-    updateBalance();
-}
-
-// История игр
-function addToHistory(game, bet, win) {
-    const time = new Date().toLocaleTimeString();
-    const item = {
-        game,
-        bet,
-        win,
-        time,
-        profit: win - bet
-    };
-    
-    gameHistory.unshift(item);
-    if (gameHistory.length > 10) gameHistory.pop();
-    
-    saveHistory();
-    updateHistoryDisplay();
-}
-
-function updateHistoryDisplay() {
-    const container = document.getElementById('gameHistory');
-    container.innerHTML = gameHistory.map(item => `
-        <div class="history-item">
-            <strong>${item.game}</strong> | Ставка: ${item.bet} ₿ | 
-            Выигрыш: <span style="color: ${item.win > 0 ? '#00ff00' : '#ff4444'}">${item.win} ₿</span> |
-            Время: ${item.time}
-        </div>
-    `).join('');
-}
-
-function saveHistory() {
-    localStorage.setItem('casinoHistory', JSON.stringify(gameHistory));
-}
-
-function loadGameHistory() {
-    const saved = localStorage.getItem('casinoHistory');
-    if (saved) {
-        gameHistory = JSON.parse(saved);
-        updateHistoryDisplay();
+    function updateButtons(active) {
+        hitButton.disabled = !active;
+        standButton.disabled = !active;
+        doubleButton.disabled = !active;
+        dealButton.disabled = active;
     }
 }
 
-// Платежи через CryptoBot
-async function createInvoice() {
-    const amount = parseInt(document.getElementById('depositAmount').value);
+// Платежи: Пополнение
+async function processDeposit() {
+    const amount = document.getElementById('customDeposit').value || 100;
     
-    if (amount < 100) {
-        showNotification('Минимальный депозит: 100 ₿', 'error');
+    if (amount < 10) {
+        showNotification('Минимальное пополнение: 10 USDT', 'error');
         return;
     }
     
     try {
-        showNotification('Создание инвойса...', 'info');
+        const response = await fetch(`${API_BASE_URL}/api/create-invoice`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('casino_token')}`
+            },
+            body: JSON.stringify({
+                amount: amount,
+                currency: 'USDT'
+            })
+        });
         
-        // В реальном приложении используйте серверный endpoint
-        const invoice = await createInvoiceAPI(amount);
+        const result = await response.json();
         
-        if (invoice.ok) {
-            const paymentInfo = document.getElementById('paymentInfo');
-            paymentInfo.innerHTML = `
-                <h4>Инвойс создан!</h4>
-                <p>Сумма: ${amount} ₿</p>
-                <p>Ссылка для оплаты: <a href="${invoice.result.pay_url}" target="_blank">${invoice.result.pay_url}</a></p>
-                <p>ID инвойса: ${invoice.result.invoice_id}</p>
-                <p><small>После оплаты баланс пополнится автоматически</small></p>
-            `;
-            paymentInfo.style.display = 'block';
-            
-            // В реальном приложении здесь должен быть polling для проверки статуса
-            // или использование вебхуков
-            
-            showNotification('Инвойс создан! Перейдите по ссылке для оплаты.', 'success');
+        if (result.ok) {
+            showDepositModal(result.result);
         } else {
-            showNotification('Ошибка при создании инвойса', 'error');
+            showNotification('Ошибка при создании счёта', 'error');
         }
     } catch (error) {
-        console.error('Error creating invoice:', error);
-        showNotification('Ошибка соединения с платежной системой', 'error');
+        console.error('Deposit error:', error);
+        showNotification('Ошибка соединения', 'error');
     }
 }
 
-// Имитация API вызова (замените на реальный)
-async function createInvoiceAPI(amount) {
-    // В реальном приложении здесь должен быть fetch к вашему серверному endpoint
-    // который будет вызывать CryptoBot API
+// Платежи: Вывод
+async function processWithdrawal() {
+    const amount = parseFloat(document.getElementById('withdrawAmount').value);
+    const address = document.getElementById('withdrawAddress').value.trim();
     
-    // Пример реального запроса (не работает без серверной части):
-    /*
-    const response = await fetch('/api/create-invoice', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            amount: amount,
-            currency: 'USD', // или другая валюта
-            userId: document.getElementById('userId').textContent
-        })
-    });
+    if (!userData) {
+        showNotification('Сначала войдите в систему', 'error');
+        return;
+    }
     
-    return await response.json();
-    */
+    if (amount < 50) {
+        showNotification('Минимальный вывод: 50 USDT', 'error');
+        return;
+    }
     
-    // Заглушка для демо
-    return new Promise(resolve => {
-        setTimeout(() => {
-            resolve({
-                ok: true,
-                result: {
-                    invoice_id: Math.floor(Math.random() * 1000000),
-                    pay_url: `https://t.me/CryptoBot?start=invoice_${Date.now()}`,
-                    amount: amount,
-                    status: 'active'
-                }
-            });
-        }, 1000);
-    });
+    if (amount > userData.balance) {
+        showNotification('Недостаточно средств', 'error');
+        return;
+    }
+    
+    if (!address || !address.startsWith('T')) {
+        showNotification('Введите корректный адрес TRC20', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/withdraw`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('casino_token')}`
+            },
+            body: JSON.stringify({
+                amount: amount,
+                address: address,
+                currency: 'USDT'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Запрос на вывод отправлен!', 'success');
+            userData.balance -= amount;
+            updateUserInfo();
+            
+            // Отправить уведомление в Telegram
+            if (userData.telegram_id) {
+                sendTelegramNotification(userData.telegram_id, 
+                    `Запрос на вывод ${amount} USDT отправлен. Статус: в обработке.`);
+            }
+        } else {
+            showNotification(result.error || 'Ошибка при выводе', 'error');
+        }
+    } catch (error) {
+        console.error('Withdrawal error:', error);
+        showNotification('Ошибка соединения', 'error');
+    }
 }
 
 // Уведомления
 function showNotification(message, type = 'info') {
+    const notification = document.getElementById('notification');
     const colors = {
-        success: '#00ff00',
-        error: '#ff4444',
-        info: '#ffd700',
-        warning: '#ff8c00'
+        success: '#00b894',
+        error: '#d63031',
+        info: '#0984e3',
+        warning: '#fdcb6e'
     };
     
     notification.textContent = message;
-    notification.style.backgroundColor = colors[type] || colors.info;
+    notification.style.background = colors[type] || colors.info;
     notification.style.display = 'block';
     
     setTimeout(() => {
@@ -464,25 +812,225 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Добавьте эти обработчики для рулетки
-document.addEventListener('DOMContentLoaded', () => {
-    const colorBtns = document.querySelectorAll('.color-btn');
-    colorBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            colorBtns.forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            document.getElementById('numberBet').value = '';
-        });
-    });
+// Модальные окна
+function showTelegramModal() {
+    document.getElementById('telegramModal').style.display = 'block';
+}
+
+function showDepositModal(invoice) {
+    const modal = document.getElementById('depositModal');
+    const infoDiv = document.getElementById('paymentInfo');
+    const qrDiv = document.getElementById('qrCode');
     
-    const numberBet = document.getElementById('numberBet');
-    numberBet.addEventListener('input', () => {
-        const value = parseInt(numberBet.value);
-        if (value < 0) numberBet.value = 0;
-        if (value > 36) numberBet.value = 36;
-        
-        if (numberBet.value !== '') {
-            colorBtns.forEach(b => b.classList.remove('active'));
-        }
+    infoDiv.innerHTML = `
+        <h4>Счёт на оплату создан</h4>
+        <p>Сумма: <strong>${invoice.amount} USDT</strong></p>
+        <p>Ссылка для оплаты: <a href="${invoice.pay_url}" target="_blank">${invoice.pay_url}</a></p>
+        <p>ID счёта: ${invoice.invoice_id}</p>
+        <p><small>Оплатите в течение 1 часа</small></p>
+    `;
+    
+    // Генерация QR кода
+    qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(invoice.pay_url)}" alt="QR Code">`;
+    
+    modal.style.display = 'block';
+}
+
+// Закрытие модальных окон
+document.querySelectorAll('.modal-close').forEach(closeBtn => {
+    closeBtn.addEventListener('click', () => {
+        closeBtn.closest('.modal').style.display = 'none';
     });
 });
+
+// Инициализация Telegram Web App
+function initTelegramWebApp() {
+    const tg = window.Telegram.WebApp;
+    
+    // Получить данные пользователя
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+        userData = {
+            telegram_id: user.id,
+            username: user.username,
+            first_name: user.first_name,
+            last_name: user.last_name
+        };
+        
+        // Авторизовать пользователя
+        authenticateTelegramUser(user);
+    }
+    
+    // Настроить интерфейс
+    tg.setHeaderColor('#6c5ce7');
+    tg.setBackgroundColor('#1a1a2e');
+    tg.enableClosingConfirmation();
+}
+
+async function authenticateTelegramUser(user) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/telegram`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: user.id,
+                username: user.username,
+                first_name: user.first_name,
+                last_name: user.last_name
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.token) {
+            localStorage.setItem('casino_token', result.token);
+            userData = { ...userData, ...result.user };
+            updateUserInfo();
+            loadUserData();
+            
+            showNotification(`Добро пожаловать, ${user.first_name}!`, 'success');
+        }
+    } catch (error) {
+        console.error('Telegram auth error:', error);
+    }
+}
+
+async function sendTelegramNotification(chatId, message) {
+    try {
+        await fetch(`${API_BASE_URL}/api/telegram/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                chatId: chatId,
+                message: message
+            })
+        });
+    } catch (error) {
+        console.error('Telegram notification error:', error);
+    }
+}
+
+// Загрузка последних игр
+async function loadRecentGames() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/games/recent`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('casino_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const games = await response.json();
+            const container = document.getElementById('recentGames');
+            
+            container.innerHTML = games.map(game => `
+                <div class="game-item">
+                    <div class="game-type">${getGameIcon(game.game_type)}</div>
+                    <div class="game-info">
+                        <span class="game-name">${getGameName(game.game_type)}</span>
+                        <span class="game-time">${new Date(game.created_at).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="game-result ${game.win_amount > 0 ? 'win' : 'loss'}">
+                        ${game.win_amount > 0 ? '+' : ''}${game.win_amount} USDT
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading recent games:', error);
+    }
+}
+
+// Загрузка транзакций
+async function loadTransactions() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/transactions`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('casino_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const transactions = await response.json();
+            const container = document.getElementById('transactionsList');
+            
+            container.innerHTML = transactions.map(tx => `
+                <div class="transaction-item">
+                    <div class="tx-type ${tx.type}">
+                        <i class="fas ${getTransactionIcon(tx.type)}"></i>
+                    </div>
+                    <div class="tx-info">
+                        <span class="tx-desc">${getTransactionDescription(tx)}</span>
+                        <span class="tx-time">${new Date(tx.created_at).toLocaleString()}</span>
+                    </div>
+                    <div class="tx-amount ${tx.amount > 0 ? 'positive' : 'negative'}">
+                        ${tx.amount > 0 ? '+' : ''}${tx.amount} USDT
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading transactions:', error);
+    }
+}
+
+// Вспомогательные функции
+function getGameIcon(type) {
+    const icons = {
+        'slots': '🎰',
+        'dice': '🎲',
+        'roulette': '🎡',
+        'blackjack': '🃏'
+    };
+    return icons[type] || '🎮';
+}
+
+function getGameName(type) {
+    const names = {
+        'slots': 'Слоты',
+        'dice': 'Кости',
+        'roulette': 'Рулетка',
+        'blackjack': 'Блэкджек'
+    };
+    return names[type] || 'Игра';
+}
+
+function getTransactionIcon(type) {
+    const icons = {
+        'deposit': 'fa-arrow-down',
+        'withdraw': 'fa-arrow-up',
+        'win': 'fa-trophy',
+        'bet': 'fa-coins'
+    };
+    return icons[type] || 'fa-exchange-alt';
+}
+
+function getTransactionDescription(tx) {
+    const descriptions = {
+        'deposit': 'Пополнение баланса',
+        'withdraw': 'Вывод средств',
+        'win': 'Выигрыш',
+        'bet': 'Ставка в игре'
+    };
+    return descriptions[tx.type] || 'Транзакция';
+}
+
+async function addGameToHistory(gameType, bet, win, result) {
+    // Обновить UI истории
+    const historyItem = document.createElement('div');
+    historyItem.className = 'history-item';
+    historyItem.innerHTML = `
+        <div class="history-game">${getGameName(gameType)}</div>
+        <div class="history-bet">${bet} USDT</div>
+        <div class="history-win ${win > 0 ? 'positive' : 'negative'}">
+            ${win > 0 ? '+' : ''}${win} USDT
+        </div>
+        <div class="history-result">${result}</div>
+    `;
+    
+    document.getElementById('recentGames').prepend(historyItem);
+}
