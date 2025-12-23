@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Casino</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-coins"></i> Crypto Casino</h1>
+            <div class="user-info">
+                <div class="balance">
+                    <span id="balance">1000</span> ₿
+                </div>
+                <div class="user-id">
+                    ID: <span id="userId">USER_12345</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="game-selection">
+            <h2>Выберите игру</h2>
+            <div class="games">
+                <div class="game-card" data-game="slots">
+                    <i class="fas fa-sliders-h"></i>
+                    <h3>Слоты</h3>
+                </div>
+                <div class="game-card" data-game="dice">
+                    <i class="fas fa-dice"></i>
+                    <h3>Кости</h3>
+                </div>
+                <div class="game-card" data-game="roulette">
+                    <i class="fas fa-compact-disc"></i>
+                    <h3>Рулетка</h3>
+                </div>
+            </div>
+        </div>
+
+        <main class="game-area">
+            <!-- Слоты -->
+            <div id="slots-game" class="game active">
+                <h2>Слот-машина</h2>
+                <div class="slots-container">
+                    <div class="slot-reel" id="reel1">🍒</div>
+                    <div class="slot-reel" id="reel2">🍋</div>
+                    <div class="slot-reel" id="reel3">7️⃣</div>
+                </div>
+                <div class="bet-controls">
+                    <label>Ставка:</label>
+                    <div class="bet-amount">
+                        <button class="bet-btn" data-change="-100">-100</button>
+                        <input type="number" id="slotsBet" value="100" min="10" max="1000">
+                        <button class="bet-btn" data-change="100">+100</button>
+                    </div>
+                    <button id="spinBtn" class="play-btn">
+                        <i class="fas fa-redo"></i> Крутить
+                    </button>
+                </div>
+                <div class="result" id="slotsResult"></div>
+            </div>
+
+            <!-- Кости -->
+            <div id="dice-game" class="game">
+                <h2>Игра в кости</h2>
+                <div class="dice-container">
+                    <div class="dice" id="dice1">⚀</div>
+                    <div class="dice" id="dice2">⚁</div>
+                </div>
+                <div class="bet-choice">
+                    <p>Выберите ставку:</p>
+                    <div class="choice-buttons">
+                        <button class="choice-btn" data-choice="even">Чётное</button>
+                        <button class="choice-btn" data-choice="odd">Нечётное</button>
+                        <button class="choice-btn" data-choice="high">Высокое (4-6)</button>
+                        <button class="choice-btn" data-choice="low">Низкое (1-3)</button>
+                    </div>
+                </div>
+                <div class="bet-controls">
+                    <label>Ставка:</label>
+                    <input type="number" id="diceBet" value="50" min="10" max="500">
+                    <button id="rollDiceBtn" class="play-btn">
+                        <i class="fas fa-dice"></i> Бросить кости
+                    </button>
+                </div>
+                <div class="result" id="diceResult"></div>
+            </div>
+
+            <!-- Рулетка -->
+            <div id="roulette-game" class="game">
+                <h2>Рулетка</h2>
+                <div class="roulette-wheel" id="rouletteWheel">
+                    <div class="wheel-center">0</div>
+                </div>
+                <div class="roulette-bets">
+                    <div class="color-bets">
+                        <button class="color-btn red" data-color="red">Красное</button>
+                        <button class="color-btn black" data-color="black">Чёрное</button>
+                        <button class="color-btn green" data-color="green">Зелёное (0)</button>
+                    </div>
+                    <div class="number-bets">
+                        <input type="number" id="numberBet" min="0" max="36" placeholder="Число (0-36)">
+                    </div>
+                </div>
+                <div class="bet-controls">
+                    <label>Ставка:</label>
+                    <input type="number" id="rouletteBet" value="50" min="10" max="1000">
+                    <button id="spinRouletteBtn" class="play-btn">
+                        <i class="fas fa-compact-disc"></i> Крутить рулетку
+                    </button>
+                </div>
+                <div class="result" id="rouletteResult"></div>
+            </div>
+        </main>
+
+        <div class="payment-section">
+            <h3><i class="fas fa-wallet"></i> Пополнение баланса</h3>
+            <div class="deposit-options">
+                <div class="deposit-amount">
+                    <input type="number" id="depositAmount" value="1000" min="100" max="10000">
+                    <span>₿</span>
+                </div>
+                <button id="depositBtn" class="payment-btn">
+                    <i class="fas fa-coins"></i> Пополнить через CryptoBot
+                </button>
+            </div>
+            <div id="paymentInfo" class="payment-info"></div>
+        </div>
+
+        <div class="history">
+            <h3>История игр</h3>
+            <div id="gameHistory"></div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

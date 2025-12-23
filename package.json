@@ -1,0 +1,11 @@
+{
+  "name": "crypto-casino",
+  "version": "1.0.0",
+  "description": "Mini casino with CryptoBot payments",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
